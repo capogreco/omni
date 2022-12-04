@@ -8,6 +8,7 @@ const socket = new WebSocket (ws_address)
 
 socket.addEventListener (`message`, msg => {
    const obj = JSON.parse (msg.data)
+   const t = audio_context.currentTime
    switch (obj.type) {
       case 'id':
          id = obj.body
@@ -21,13 +22,30 @@ socket.addEventListener (`message`, msg => {
       case 'play':
          active = obj.body
          const mult = active ? 1 : 0
-         const t = audio_context.currentTime
          amp.gain.setValueAtTime (amp.gain.value, t)
          amp.gain.linearRampToValueAtTime (1 * mult, t + 2)
          break
-
+      case 'chord':
+         const note = rand_element (obj.body)
+         const freq = midi_to_cps (note)
+         osc.frequency.cancelScheduledValues (t)
+         osc.frequency.setValueAtTime (osc.frequency.value, t)
+         osc.frequency.exponentialRampToValueAtTime (freq, t + 1)
+         break
    }
 })
+
+function midi_to_cps (n) {
+   return 440 * (2 ** ((n - 69) / 12))
+}
+
+function rand_element (arr) {
+   return arr[rand_integer (arr.length)]
+}
+
+function rand_integer (max) {
+   return Math.floor (Math.random () * max)
+}
 
 socket.addEventListener ('open', msg => {
    console.log (`websocket is ${ msg.type } at ${ msg.target.url } `)

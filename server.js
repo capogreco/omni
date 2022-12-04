@@ -51,6 +51,10 @@ const req_handler = async req => {
                   s.send (JSON.stringify (obj))
                })
                break
+            case 'chord':
+               sockets.forEach (s => {
+                  s.send (JSON.stringify (obj))
+               })
          }
       }
 
