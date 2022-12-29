@@ -4,6 +4,9 @@ import * as uuid from "https://deno.land/std@0.119.0/uuid/mod.ts";
 
 const sockets = new Map ()
 let control = null
+let is_playing = false
+let current_chord = []
+const state = {}
 
 const req_handler = async req => {
    const path = new URL (req.url).pathname
@@ -28,6 +31,14 @@ const req_handler = async req => {
          const obj = JSON.parse (e.data)
          console.log (obj)
          switch (obj.type) {
+            case 'state':
+               console.log (`state!!`)
+               Object.assign (state, obj)
+               console.log (state)
+               sockets.forEach (s => {
+                  s.send (JSON.stringify (state))
+               })
+               break
             case 'greeting': 
                console.log (obj.body)
                break
@@ -39,22 +50,43 @@ const req_handler = async req => {
                   updateControl ()
                   console.log (`${ control.id } has control.`)
                }
-               else console.log (`${ id } wants control!`)
+               else {
+                  console.log (`${ id } wants control!`)
+               }
                break
             case 'joined':
                socket.joined = obj.body
                console.log (`${ id } has joined!`)
                updateControl ()
+
+               if (is_playing) {
+                  const msg = {
+                     type: 'play',
+                     body: is_playing,
+                  }
+                  socket.send (JSON.stringify (msg))
+
+                  if (current_chord.length > 0) {
+                     const msg = {
+                        type: `chord`,
+                        body: current_chord
+                     }
+                     socket.send (JSON.stringify (msg))
+                  }
+               }
                break
             case 'play':
+               is_playing = obj.body
                sockets.forEach (s => {
                   s.send (JSON.stringify (obj))
                })
                break
             case 'chord':
+               current_chord = obj.body
                sockets.forEach (s => {
                   s.send (JSON.stringify (obj))
                })
+               break
          }
       }
 

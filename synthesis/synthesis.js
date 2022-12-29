@@ -6,6 +6,9 @@ const ws_address = `ws://localhost/`
 
 const socket = new WebSocket (ws_address)
 
+let init    = false
+const state = {}
+
 socket.addEventListener (`message`, msg => {
    const obj = JSON.parse (msg.data)
    const t = audio_context.currentTime
@@ -19,21 +22,36 @@ socket.addEventListener (`message`, msg => {
          }
          socket.send (JSON.stringify (greeting))      
          break
-      case 'play':
-         active = obj.body
-         const mult = active ? 1 : 0
-         amp.gain.setValueAtTime (amp.gain.value, t)
-         amp.gain.linearRampToValueAtTime (1 * mult, t + 2)
-         break
-      case 'chord':
-         const note = rand_element (obj.body)
-         const freq = midi_to_cps (note)
-         osc.frequency.cancelScheduledValues (t)
-         osc.frequency.setValueAtTime (osc.frequency.value, t)
-         osc.frequency.exponentialRampToValueAtTime (freq, t + 1)
+      // case 'play':
+      //    active = obj.body
+      //    const mult = active ? 1 : 0
+      //    amp.gain.setValueAtTime (amp.gain.value, t)
+      //    amp.gain.linearRampToValueAtTime (1 * mult, t + 2)
+      //    console.log (`bpm is ${ obj.tempo.bpm }, sudivision is ${ obj.tempo.sub }`)
+      //    break
+      // case 'chord':
+      //    const note = rand_element (obj.body)
+      //    const freq = midi_to_cps (note)
+      //    osc.frequency.cancelScheduledValues (t)
+      //    osc.frequency.setValueAtTime (osc.frequency.value, t)
+      //    osc.frequency.exponentialRampToValueAtTime (freq, t + 1)
+      //    console.log (`bpm is ${ obj.tempo.bpm }, sudivision is ${ obj.tempo.sub }`)
+      //    break
+      case 'state':
+
+         if (JSON.stringify (obj) != JSON.stringify (state)) {
+            Object.assign (state, obj)
+            new_state ()
+         }
+
+         if (!init) {
+            init = true
+         }
+
          break
    }
 })
+
 
 function midi_to_cps (n) {
    return 440 * (2 ** ((n - 69) / 12))
@@ -89,9 +107,6 @@ document.body.onclick = async () => {
 
 // ~ WEB AUDIO THINGS ~
 
-let active = false
-
-
 const audio_context = new AudioContext ()
 audio_context.suspend ()
 
@@ -117,4 +132,107 @@ osc.connect (amp)
 lfo.start ()
 osc.start ()
 
+const modes  = [ `stat` ,`asce` ,`desc` ,`shuf` ,`rand` ]
 
+const arpeggiator = {
+   active  : false,
+   period  : 1,
+   port    : 0,
+   shuff   : [],
+   i       : 0,
+   mode    : 'stat',
+   init    : function () {
+      this.i = rand_integer (state.chord.length)
+      this.u = this.i
+      this.shuff = new_shuff (state.chord.length)
+   },
+   play    : function play_note () {
+      switch (this.mode) {         
+         case `stat` :
+            break
+         case `asce` :
+            this.i++
+            this.i %= state.chord.length
+            this.u = this.i
+            break
+         case `desc` :
+            this.i--
+            if (this.i < 0) {
+               this.i = state.chord.length - 1
+            }
+            this.u = this.i
+            break
+         case `shuf` :
+            this.i++
+            this.i %= state.chord.length
+            this.u = this.shuff[this.i]
+            break
+         case `rand` :
+            this.u = rand_integer (state.chord.length)
+            while (this.u == this.i) {
+               this.u = rand_integer (state.chord.length)
+            }
+            this.i = this.u
+            break
+      }
+
+      const note = state.chord[this.u]
+      const freq = midi_to_cps (note)
+      const t = audio_context.currentTime
+
+      osc.frequency.cancelScheduledValues (t)
+      osc.frequency.setValueAtTime (osc.frequency.value, t)
+      const glide = ((state.portamento * 0.125) ** 2) * this.period
+      osc.frequency.exponentialRampToValueAtTime (freq, t + glide)
+
+      if (state.active) {
+         setTimeout (play_note.bind (this), this.period * 1000)
+      }
+   }
+}
+
+function new_shuff (l) {
+   let n = l
+
+   const acc = []
+   while (n > 0) {
+      n--
+      acc.push (n)
+   }
+
+   const res = []
+   while (acc.length > 0) {
+      const s = acc.splice (rand_integer (acc.length), 1)
+      res.push (s[0])
+   }
+
+   return res
+}
+
+function new_state () {
+   const t = audio_context.currentTime
+
+   arpeggiator.period = 60 / (state.bpm * state.subdivision)
+   arpeggiator.mode   = modes[state.mode_i]
+
+   const rel = state.release * arpeggiator.period
+
+   const mult = state.active ? 1 : 0
+   amp.gain.cancelScheduledValues (t)
+   amp.gain.setValueAtTime (amp.gain.value, t)
+   amp.gain.linearRampToValueAtTime (1 * mult, t + rel)
+
+
+   if (state.active && !arpeggiator.active) {
+      arpeggiator.init ()
+      arpeggiator.active = true
+      arpeggiator.play ()
+      console.log (`playing!!`)
+   }
+
+   if (!state.active) {
+      console.log (`stopping!!`)
+      arpeggiator.active = state.active
+   }
+
+}
