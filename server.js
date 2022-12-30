@@ -108,6 +108,8 @@ const req_handler = async req => {
          return serveFile (req, `synthesis/index.html`)
       case "/synthesis.js":
          return serveFile (req, `synthesis/synthesis.js`)
+      case "/reverb.js":
+         return serveFile (req, `synthesis/reverb.js`)
       case "/favicon.ico":
          return serveFile (req, `synthesis/favicon.ico`)
       case "/control":
