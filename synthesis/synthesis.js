@@ -1,6 +1,7 @@
 // ~ WEBSOCKET THINGS ~
 let id = null
 const ws_address = `wss://capogreco-omni.deno.dev`
+// const ws_address = `ws://localhost/`
 
 const socket = new WebSocket (ws_address)
 
@@ -108,27 +109,39 @@ document.body.onclick = async () => {
 const audio_context = new AudioContext ()
 audio_context.suspend ()
 
-const lfo = audio_context.createOscillator ()
-lfo.type  = `sine`
-lfo.frequency.value = 0
+reverbjs.extend(audio_context)
 
-const wid = audio_context.createGain ()
+const reverb_url = "http://reverbjs.org/Library/AbernyteGrainSilo.m4a"
+var rev = audio_context.createReverbFromUrl (reverb_url, () => {
+  rev.connect (audio_context.destination)
+})
 
-const osc = audio_context.createOscillator ()
-osc.type  = `triangle`
-osc.frequency.value = 220
+const osc_array = []
+for (let i = 0; i < 12; i++) {
+   const osc = audio_context.createOscillator ()
+   osc.type  = `triangle`
+   osc.frequency.value = Math.random () * 20000
+   osc.start ()
+   osc_array.push (osc)
+}
 
-const amp = audio_context.createGain ()
-amp.gain.value = 0
+const amp_array = []
+for (let i = 0; i < 12; i++) {
+   const amp = audio_context.createGain ()
+   amp.gain.value = 0
+   amp_array.push (amp)
+}
 
-lfo.connect (wid)
-   .connect (osc.frequency)
+const rev_gate = audio_context.createGain ()
+rev_gate.gain.value = 0
+rev_gate.connect (rev)
 
-osc.connect (amp)
-   .connect (audio_context.destination)
-
-lfo.start ()
-osc.start ()
+osc_array.forEach ((osc, i) => {
+   osc.connect (amp_array[i])
+      .connect (audio_context.destination)
+   
+   amp_array[i].connect (rev_gate)
+})
 
 const modes  = [ `stat` ,`asce` ,`desc` ,`shuf` ,`rand` ]
 
@@ -147,6 +160,7 @@ const arpeggiator = {
    play    : function play_note () {
       switch (this.mode) {         
          case `stat` :
+            if (this.shuff.length != state.chord.length) this.init ()
             break
          case `asce` :
             this.i++
@@ -181,10 +195,12 @@ const arpeggiator = {
       const freq = midi_to_cps (note)
       const t = audio_context.currentTime
 
-      osc.frequency.cancelScheduledValues (t)
-      osc.frequency.setValueAtTime (osc.frequency.value, t)
-      const glide = ((state.portamento * 0.125) ** 2) * this.period
-      osc.frequency.exponentialRampToValueAtTime (freq, t + glide)
+      osc_array.forEach ((osc, i) => {
+         osc.frequency.cancelScheduledValues (t)
+         osc.frequency.setValueAtTime (osc.frequency.value, t)
+         const glide = ((state.portamento * 0.125) ** 2) * this.period
+         osc.frequency.exponentialRampToValueAtTime (freq * (i + 1), t + glide)   
+      })
 
       if (state.active) {
          setTimeout (play_note.bind (this), this.period * 1000)
@@ -216,13 +232,22 @@ function new_state () {
    arpeggiator.period = 60 / (state.bpm * state.subdivision)
    arpeggiator.mode   = modes[state.mode_i]
 
-   const mult = state.active ? 1 : 0      
+   const gate = state.active ? 1 : 0      
    const rel = state.release * arpeggiator.period
    const t = audio_context.currentTime
 
-   amp.gain.cancelScheduledValues (t)
-   amp.gain.setValueAtTime (amp.gain.value, t)
-   amp.gain.linearRampToValueAtTime (1 * mult, t + rel)   
+   amp_array.forEach ((amp, i) => {
+      const mult = i < state.bright ? 1 / (i + 1) : 0
+      amp.gain.cancelScheduledValues (t)
+      amp.gain.setValueAtTime (amp.gain.value, t)
+      amp.gain.linearRampToValueAtTime (1 * gate * mult, t + rel)      
+   })
+
+   const rev_amt = (state.reverb * 0.125) ** 2
+
+   rev_gate.gain.cancelScheduledValues (t)
+   rev_gate.gain.setValueAtTime (rev_gate.gain.value, t)
+   rev_gate.gain.linearRampToValueAtTime (rev_amt, t + rel)      
 
    if (state.active && !arpeggiator.active) {
       arpeggiator.active = true

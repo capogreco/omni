@@ -3,6 +3,7 @@
 let id = null
 
 const ws_address = `wss://capogreco-omni.deno.dev`
+// const ws_address = `ws://localhost/`
 
 const socket = new WebSocket (ws_address)
 
@@ -93,6 +94,18 @@ port_display.style.textAlign  = 'end'
 port_display.innerText        = `0 por`
 port_display.style.width      = `100%`
 tempo_display.appendChild (port_display)
+
+const bright_display = document.createElement (`div`)
+bright_display.style.textAlign  = 'end'
+bright_display.innerText        = `1 bri`
+bright_display.style.width      = `100%`
+tempo_display.appendChild (bright_display)
+
+const reverb_display = document.createElement (`div`)
+reverb_display.style.textAlign  = 'end'
+reverb_display.innerText        = `0 rev`
+reverb_display.style.width      = `100%`
+tempo_display.appendChild (reverb_display)
 
 const release_display = document.createElement (`div`)
 release_display.style.textAlign  = 'end'
@@ -256,6 +269,8 @@ const state = {
    bpm         : 120,
    subdivision : 2,
    portamento  : 0,
+   bright      : 1,
+   reverb      : 0,
    release     : 0,
    mode_i      : 0,
    chord       : [ 60, 63, 67 ],
@@ -334,6 +349,16 @@ document.body.onkeydown = e => {
          state.release++
          release_display.innerText = `${ state.release } rel`
          break
+      case 'c':
+         state.reverb--
+         state.reverb = Math.max (state.reverb, 0)
+         reverb_display.innerText = `${ state.reverb } rev`
+         break
+      case 'v':
+         state.reverb++
+         state.reverb = Math.min (state.reverb, 8)
+         reverb_display.innerText = `${ state.reverb } rev`
+         break
       case 'ArrowLeft':
          state.portamento--
          state.portamento = Math.max (state.portamento, 0)
@@ -345,8 +370,14 @@ document.body.onkeydown = e => {
          port_display.innerText = `${ state.portamento } por`
          break
       case 'ArrowDown':
+         state.bright--
+         state.bright = Math.max (state.bright, 1)
+         bright_display.innerText = `${ state.bright } bri`
          break      
       case 'ArrowUp':
+         state.bright++
+         state.bright = Math.min (state.bright, 12)
+         bright_display.innerText = `${ state.bright } bri`
          break
       case '/':
          socket.send (JSON.stringify (state))
