@@ -102,7 +102,7 @@ const req_handler = async req => {
 
       return response
    }
-
+   
    switch (path) {
       case "/":
          return serveFile (req, `synthesis/index.html`)
@@ -110,6 +110,8 @@ const req_handler = async req => {
          return serveFile (req, `synthesis/synthesis.js`)
       case "/reverb.js":
          return serveFile (req, `synthesis/reverb.js`)
+      case "/R1NuclearReactorHall.m4a":
+         return serveFile (req, `synthesis/R1NuclearReactorHall.m4a`)
       case "/favicon.ico":
          return serveFile (req, `synthesis/favicon.ico`)
       case "/control":
