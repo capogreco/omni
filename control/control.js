@@ -95,6 +95,12 @@ port_display.innerText        = `0 por`
 port_display.style.width      = `100%`
 tempo_display.appendChild (port_display)
 
+const release_display = document.createElement (`div`)
+release_display.style.textAlign  = 'end'
+release_display.innerText        = `0 rel`
+release_display.style.width      = `100%`
+tempo_display.appendChild (release_display)
+
 const mode_display = document.createElement (`div`)
 mode_display.style.textAlign  = 'end'
 mode_display.innerText        = `stat mod`
@@ -299,18 +305,6 @@ document.body.onkeydown = e => {
          state.subdivision++
          sub_display.innerText = `${ state.subdivision } sub`
          break
-      case 'x':
-         state.mode_i--
-         if (state.mode_i < 0) {
-            state.mode_i = modes.length - 1
-         }
-         mode_display.innerText = `${ modes[state.mode_i] } mod`
-         break
-      case 'z':
-         state.mode_i++
-         state.mode_i %= modes.length
-         mode_display.innerText = `${ modes[state.mode_i] } mod`
-         break
       case '>':
          octaves++
          octaves_display.innerText = `${ octaves } oct`
@@ -319,6 +313,27 @@ document.body.onkeydown = e => {
          octaves--
          octaves = Math.max (octaves, 1)
          octaves_display.innerText = `${ octaves } oct`
+         break
+      case 'z':
+         state.mode_i--
+         if (state.mode_i < 0) {
+            state.mode_i = modes.length - 1
+         }
+         mode_display.innerText = `${ modes[state.mode_i] } mod`
+         break
+      case 'x':
+         state.mode_i++
+         state.mode_i %= modes.length
+         mode_display.innerText = `${ modes[state.mode_i] } mod`
+         break
+      case 'Z':
+         state.release--
+         state.release = Math.max (state.release, 0)
+         release_display.innerText = `${ state.release } rel`
+         break
+      case 'X':
+         state.release++
+         release_display.innerText = `${ state.release } rel`
          break
       case 'ArrowLeft':
          state.portamento--

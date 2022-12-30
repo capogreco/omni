@@ -29,18 +29,14 @@ const req_handler = async req => {
 
       socket.onmessage = e => {
          const obj = JSON.parse (e.data)
-         console.log (obj)
          switch (obj.type) {
             case 'state':
-               console.log (`state!!`)
                Object.assign (state, obj)
-               console.log (state)
                sockets.forEach (s => {
                   s.send (JSON.stringify (state))
                })
                break
             case 'greeting': 
-               console.log (obj.body)
                break
             case 'request_control':
                if (!control) {

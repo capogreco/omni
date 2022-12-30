@@ -163,8 +163,11 @@ const arpeggiator = {
             this.u = this.i
             break
          case `shuf` :
-            this.i++
-            this.i %= state.chord.length
+            if (this.shuff.length != state.chord.length) this.init ()
+            else {
+               this.i++
+               this.i %= state.chord.length
+            }
             this.u = this.shuff[this.i]
             break
          case `rand` :
@@ -210,29 +213,28 @@ function new_shuff (l) {
 }
 
 function new_state () {
-   const t = audio_context.currentTime
+   if (state.active && !arpeggiator.active) arpeggiator.init ()
 
    arpeggiator.period = 60 / (state.bpm * state.subdivision)
    arpeggiator.mode   = modes[state.mode_i]
 
+   const mult = state.active ? 1 : 0      
    const rel = state.release * arpeggiator.period
+   const t = audio_context.currentTime
 
-   const mult = state.active ? 1 : 0
    amp.gain.cancelScheduledValues (t)
    amp.gain.setValueAtTime (amp.gain.value, t)
-   amp.gain.linearRampToValueAtTime (1 * mult, t + rel)
-
+   amp.gain.linearRampToValueAtTime (1 * mult, t + rel)   
 
    if (state.active && !arpeggiator.active) {
-      arpeggiator.init ()
       arpeggiator.active = true
       arpeggiator.play ()
       console.log (`playing!!`)
    }
 
-   if (!state.active) {
+   if (!state.active && arpeggiator.active) {
       console.log (`stopping!!`)
-      arpeggiator.active = state.active
+      arpeggiator.active = false
    }
 
 }
