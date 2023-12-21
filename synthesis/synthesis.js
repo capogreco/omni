@@ -1,6 +1,7 @@
 // ~ WEBSOCKET THINGS ~
 let id = null
-const ws_address = `wss://omni.science.family`
+const ws_address = `wss://jem.deno.dev`
+// const ws_address = `wss://omni.science.family`
 // const ws_address = `ws://localhost/`
 
 const socket = new WebSocket (ws_address)
@@ -88,6 +89,8 @@ text_div.style.left           = 0
 text_div.style.top            = 0
 document.body.appendChild (text_div)
 
+let wake_lock = null
+
 document.body.onclick = async () => {
    if (document.body.style.backgroundColor == `black`) {
 
@@ -100,7 +103,9 @@ document.body.onclick = async () => {
          type: 'joined',
          body: true,
       }
-      socket.send (JSON.stringify (msg))   
+      socket.send (JSON.stringify (msg))
+
+      wake_lock = await navigator.wakeLock.request (`screen`)
    }
 }
 

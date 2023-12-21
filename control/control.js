@@ -2,7 +2,8 @@
 
 let id = null
 
-const ws_address = `wss://omni.science.family`
+const ws_address = `wss://jem.deno.dev`
+// const ws_address = `wss://omni.science.family`
 // const ws_address = `ws://localhost/`
 
 const socket = new WebSocket (ws_address)
